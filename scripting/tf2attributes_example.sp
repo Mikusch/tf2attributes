@@ -6,7 +6,7 @@
 
 #define MAX_RUNTIME_ATTRIBUTES 20
 
-Address lastAddr[MAXPLAYERS + 1];
+//Address lastAddr[MAXPLAYERS + 1];
 
 public void OnPluginStart()
 {
@@ -16,16 +16,16 @@ public void OnPluginStart()
 	RegAdminCmd("sm_remwepatt", Command_RemWepAttrib, ADMFLAG_ROOT);
 	RegAdminCmd("sm_remallatt", Command_RemAllAttrib, ADMFLAG_ROOT);
 	RegAdminCmd("sm_remallwepatt", Command_RemAllWepAttrib, ADMFLAG_ROOT);
-	RegAdminCmd("sm_getattrib", Command_GetAttrByName, ADMFLAG_ROOT);
+//	RegAdminCmd("sm_getattrib", Command_GetAttrByName, ADMFLAG_ROOT);
 //	RegAdminCmd("sm_getattrid", Command_GetAttrByID, ADMFLAG_ROOT);
-	RegAdminCmd("sm_getattrs", Command_GetAttrs, ADMFLAG_ROOT);
+//	RegAdminCmd("sm_getattrs", Command_GetAttrs, ADMFLAG_ROOT);
 //	RegAdminCmd("sm_attrset", SetValueStuff, ADMFLAG_ROOT); //Definitely unsafe as all hell
 	LoadTranslations("common.phrases");
 }
 public void OnMapStart()
 {
-	for (int client = 0; client <= MaxClients; client++)
-		lastAddr[client] = Address_Null;
+//	for (int client = 0; client <= MaxClients; client++)
+//		lastAddr[client] = Address_Null;
 }
 public Action Command_RemAttrib(int client, int args)
 {
@@ -407,6 +407,7 @@ public Action Command_AddWepAttrib(int client, int args)
 		ReplyToCommand(client, "[SM] Added attrib '%s' val %s to active wep of %s%s", arg2, arg3, target_name, passint ? " as int" : "");
 	return Plugin_Handled;
 }
+#if 0
 public Action Command_GetAttrByName(int client, int args)
 {
 	char arg1[32];
@@ -622,11 +623,13 @@ public Action SetValueStuff(int client, int args)
 	ReplyToCommand(client, "[SM] Set %d on %d to %s", type, addr, arg3);
 	return Plugin_Handled;
 }
+#endif
 stock bool IsValidClient(int client)
 {
 	if (client <= 0 || client > MaxClients) return false;
 	return IsClientInGame(client);
 }
+#if 0
 //TODO Stop using Address_MinimumValid once verified that logic still works without it
 stock bool IsValidAddress(Address pAddress)
 {
@@ -642,3 +645,4 @@ stock int unsigned_compare(int a, int b) {
 		return ((a & 0x7FFFFFFF) > (b & 0x7FFFFFFF)) ? 1 : -1;
 	return ((a >>> 31) > (b >>> 31)) ? 1 : -1;
 }
+#endif

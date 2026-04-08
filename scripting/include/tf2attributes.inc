@@ -53,7 +53,7 @@ native bool TF2Attrib_SetFromStringValue(int iEntity, const char[] strAttrib, co
  * @return				Address of the attribute on the entity, or Address_Null if the attribute does not exist on the entity.
  * @error				Invalid entity index or attribute name passed.
  */
-native Address TF2Attrib_GetByName(int iEntity, const char[] strAttrib);
+//native Address TF2Attrib_GetByName(int iEntity, const char[] strAttrib);
 
 /**
  * Returns the address of an attribute (by attribute index) on an entity.
@@ -64,7 +64,7 @@ native Address TF2Attrib_GetByName(int iEntity, const char[] strAttrib);
  * @return				Address of the attribute on the entity, or Address_Null if the attribute does not exist on the entity.
  * @error				Invalid entity index or attribute index passed.
  */
-native Address TF2Attrib_GetByDefIndex(int iEntity, int iDefIndex);
+//native Address TF2Attrib_GetByDefIndex(int iEntity, int iDefIndex);
 
 /**
  * Removes an attribute from an entity.
@@ -163,7 +163,7 @@ native float TF2Attrib_GetValue(Address pAttrib);
  * 
  * @return Number of bytes written.
  */
-native int TF2Attrib_UnsafeGetStringValue(any pRawValue, char[] buffer, int maxlen);
+native int TF2Attrib_UnsafeGetStringValue(Address pRawValue, char[] buffer, int maxlen);
 
 /**
  * Sets the value of m_nRefundableCurrency on an attribute.
@@ -324,8 +324,8 @@ public void __pl_tf2attributes_SetNTVOptional()
 {
 	MarkNativeAsOptional("TF2Attrib_SetByName");
 	MarkNativeAsOptional("TF2Attrib_SetByDefIndex");
-	MarkNativeAsOptional("TF2Attrib_GetByName");
-	MarkNativeAsOptional("TF2Attrib_GetByDefIndex");
+	//MarkNativeAsOptional("TF2Attrib_GetByName");
+	//MarkNativeAsOptional("TF2Attrib_GetByDefIndex");
 	MarkNativeAsOptional("TF2Attrib_RemoveByName");
 	MarkNativeAsOptional("TF2Attrib_RemoveByDefIndex");
 	MarkNativeAsOptional("TF2Attrib_RemoveAll");
