@@ -1,7 +1,6 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-#include <tf2_stocks>
 #include <tf2attributes>
 
 public Plugin myinfo =
@@ -20,7 +19,6 @@ public Plugin myinfo =
 #define LOG_PREFIX_WARN LOG_PREFIX ... "**WARNING** "
 #define LOG_PREFIX_INFO LOG_PREFIX ... "--- "
 
-#define ATTR_CUSTOM_NAME_ATTR 500 // ""custom_name_attr"
 #define ATTR_HEALTH_REGEN 57 // "health regen"
 
 #define ATTR_MAJOR_MOVE_SPEED_BONUS 442 // "major move speed bonus"
@@ -28,8 +26,6 @@ public Plugin myinfo =
 
 #define ATTR_DAMAGE_CAUSES_AIRBLAST 522
 #define ATTR_DAMAGE_CAUSES_AIRBLAST_VALUE 1
-
-#define ATTR_MIN_VIEWMODEL_OFFSET 796 // "min_viewmodel_offset", "string" type that generally all weapons have
 
 enum LogType
 {
@@ -55,21 +51,13 @@ static const char g_sTestAttribNameFloat[] = "major move speed bonus";
 static const char g_sTestAttribClassFloat[] = "mult_player_movespeed"; // Needs to be multiplicative for test to pass
 const int g_iTestAttribDefIndexFloat = ATTR_MAJOR_MOVE_SPEED_BONUS;
 const float g_fTestAttribValue = MAJOR_MOVE_SPEED_BONUS_VALUE;
-char g_sTestAttribValue[18];
-
-static const char g_sTestAttribNameString[] = "start drop date"; // items_game.txt: "attribute_type"	"string"
-
 public void OnPluginStart()
 {
-	FloatToString(g_fTestAttribValue, g_sTestAttribValue, sizeof(g_sTestAttribValue));
-
-	RegAdminCmd("sm_test_tf2attributes", Command_TestTF2Attributes, ADMFLAG_ROOT, "Full automated test. Equip name tagged primary weapon if possible.");
+	RegAdminCmd("sm_test_tf2attributes", Command_TestTF2Attributes, ADMFLAG_ROOT, "Full automated test.");
 }
 
 Action Command_TestTF2Attributes(int client, int args)
 {
-	// Untested scenarios: TF2Attrib_UnsafeGetStringValue reading SOC attribute string values
-
 	if (!client || !IsPlayerAlive(client))
 	{
 		ReplyToCommand(client, "You must be alive to run this command.");
@@ -90,13 +78,11 @@ Action Command_TestTF2Attributes(int client, int args)
 	Test_TF2Attrib_IsIntegerValue(client); // TF2Attrib_IsIntegerValue
 	Test_TF2Attrib_SetByName(client, iWeapon); // TF2Attrib_SetByName, TF2Attrib_GetByName, TF2Attrib_GetValue, TF2Attrib_RemoveByName
 	Test_TF2Attrib_SetByDefIndex(client, iWeapon); // TF2Attrib_SetByDefIndex, TF2Attrib_GetByDefIndex, TF2Attrib_ListDefIndices, TF2Attrib_RemoveByDefIndex
-	Test_TF2Attrib_GetStaticAttribs(client, iWeapon); // TF2Attrib_GetStaticAttribs, TF2Attrib_UnsafeGetStringValue
+	Test_TF2Attrib_GetStaticAttribs(client, iWeapon); // TF2Attrib_GetStaticAttribs
 	Test_TF2Attrib_GetSOCAttribs(client, iWeapon); // TF2Attrib_GetSOCAttribs
 	Test_TF2Attrib_AddCustomPlayerAttribute(client); // TF2Attrib_AddCustomPlayerAttribute, TF2Attrib_RemoveCustomPlayerAttribute
 	Test_TF2Attrib_HookValueFloat(client, iWeapon); // TF2Attrib_HookValueFloat
 	Test_TF2Attrib_HookValueInt(client, iWeapon); // TF2Attrib_HookValueInt
-	Test_TF2Attrib_HookValueString(client, iWeapon); // TF2Attrib_HookValueString
-	Test_TF2Attrib_SetFromStringValue(client, iWeapon); // TF2Attrib_SetFromStringValue, TF2Attrib_UnsafeGetStringValue
 	Test_TF2Attrib_SetRefundableCurrency(client, iWeapon); // TF2Attrib_SetRefundableCurrency, TF2Attrib_GetRefundableCurrency
 	Test_TF2Attrib_SetGet_ClearCache(client, iWeapon); // TF2Attrib_SetDefIndex, TF2Attrib_GetDefIndex, TF2Attrib_SetValue, TF2Attrib_ClearCache
 	Test_TF2Attrib_RemoveAll(client, iWeapon); // TF2Attrib_RemoveAll
@@ -294,26 +280,10 @@ void Test_TF2Attrib_GetStaticAttribs(int client, int iWeapon)
 
 	LogTest(client, LogType_Info, "TF2Attrib_GetStaticAttribs iNumAttr: %d", iNumAttr);
 
-	bool bHasMinViewmodelOffsetAttr;
-	char sMinViewmodelOffset[64];
-
 	for (int i = 0; i < iNumAttr; i++)
 	{
-		if (iAttribIndices[i] == ATTR_MIN_VIEWMODEL_OFFSET)
-		{
-			bHasMinViewmodelOffsetAttr = true;
-
-			LogTest(client, LogType_Info, "TF2Attrib_UnsafeGetStringValue on expected string type static attribute(%d) virtual address %u", iAttribIndices[i], fAttribValues[i]);
-			TF2Attrib_UnsafeGetStringValue(fAttribValues[i], sMinViewmodelOffset, sizeof(sMinViewmodelOffset));
-
-			LogTest(client, LogType_Info, "TF2Attrib_GetStaticAttribs Attrib %d: %d = '%s'", i, iAttribIndices[i], sMinViewmodelOffset);
-		}
-		else
-			LogTest(client, LogType_Info, "TF2Attrib_GetStaticAttribs Attrib %d: %d = %f", i, iAttribIndices[i], fAttribValues[i]);
+		LogTest(client, LogType_Info, "TF2Attrib_GetStaticAttribs Attrib %d: %d = %f", i, iAttribIndices[i], fAttribValues[i]);
 	}
-
-	if (!bHasMinViewmodelOffsetAttr)
-		LogTest(client, LogType_Warn, "Tested item does not have 'min_viewmodel_offset' static attribute, which all weapons should have");
 
 	LogTest(client, LogType_Passed, sTest);
 }
@@ -335,25 +305,16 @@ void Test_TF2Attrib_GetSOCAttribs(int client, int iWeapon)
 		else
 			LogTest(client, LogType_Failed, "TF2Attrib_GetSOCAttribs returned 0 attributes. " ...
 				"This test expects the tested weapon to have come from the item server. " ...
-				"Treat as hard failure if it did. TF2Attrib_HookValueString will have a warning.");
+				"Treat as hard failure if it did.");
 		return;
 	}
 
 	LogTest(client, LogType_Info, "TF2Attrib_GetSOCAttribs iNumAttr: %d", iNumAttr);
 
-	bool bHasCustomNameAttr;
-
 	for (int i = 0; i < iNumAttr; i++)
 	{
 		LogTest(client, LogType_Info, "TF2Attrib_GetSOCAttribs Attrib %d: %d = %f", i, iAttribIndices[i], fAttribValues[i]);
-
-		if (iAttribIndices[i] == ATTR_CUSTOM_NAME_ATTR)
-			bHasCustomNameAttr = true;
 	}
-
-	if (!bHasCustomNameAttr)
-		LogTest(client, LogType_Warn, "Tested item does not have 'custom_name_attr' attribute (name tag). " ...
-			"TF2Attrib_HookValueString will have a warning.");
 
 	LogTest(client, LogType_Passed, sTest);
 }
@@ -458,42 +419,6 @@ void Test_TF2Attrib_HookValueInt(int client, int entity)
 	LogTest(client, LogType_Passed, sTest);
 }
 
-void Test_TF2Attrib_HookValueString(int client, int iWeapon)
-{
-	char sTest[] = "TF2Attrib_HookValueString";
-	LogTest(client, LogType_Start, sTest);
-
-	char sInitial[] = " yip!";
-
-	LogTest(client, LogType_Info, "TF2Attrib_HookValueString on 'custom_name_attr'");
-	char sNameTag[64];
-	int iLen = TF2Attrib_HookValueString(sInitial, "custom_name_attr", iWeapon, sNameTag, sizeof(sNameTag));
-
-	if (!iLen)
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_HookValueString failed, returned length 0. " ...
-			"Should at least return sInitial length(%d) if tested on item without 'custom_name_attr' attribute (name tag)", sizeof(sInitial) - 1);
-		return;
-	}
-
-	if (!strncmp(sNameTag, sInitial, sizeof(sInitial) - 1))
-	{
-		LogTest(client, LogType_Warn, "TF2Attrib_HookValueString output matches initial string. " ...
-			"This should only happen if tested on an item without 'custom_name_attr' attribute (name tag), " ...
-			"probably fine though if so and no crash");
-	}
-	else
-	{
-		LogTest(client, LogType_Info, "TF2Attrib_HookValueString returned name tag '%s'", sNameTag);
-	}
-
-	// This just checks that passing an empty initial string doesn't trigger the null address error: "NULL Address not allowed"
-	LogTest(client, LogType_Info, "TF2Attrib_HookValueString with empty initial string passed in");
-	TF2Attrib_HookValueString("", "custom_name_attr", iWeapon, sNameTag, sizeof(sNameTag));
-
-	LogTest(client, LogType_Passed, sTest);
-}
-
 void Test_TF2Attrib_SetRefundableCurrency(int client, int entity)
 {
 	char sTest[] = "TF2Attrib_SetRefundableCurrency, TF2Attrib_GetRefundableCurrency";
@@ -592,73 +517,6 @@ void Test_TF2Attrib_SetGet_ClearCache(int client, int entity)
 		LogTest(client, LogType_Failed, "TF2Attrib_RemoveByDefIndex failed, further tests will be tainted");
 		return;
 	}
-
-	LogTest(client, LogType_Passed, sTest);
-}
-
-void Test_TF2Attrib_SetFromStringValue(int client, int entity)
-{
-	char sTest[] = "TF2Attrib_SetFromStringValue, TF2Attrib_UnsafeGetStringValue";
-	LogTest(client, LogType_Start, sTest);
-
-	LogTest(client, LogType_Info, "TF2Attrib_SetFromStringValue networked '%s' to value '%s'", g_sTestAttribNameFloat, g_sTestAttribValue);
-	if (!TF2Attrib_SetFromStringValue(entity, g_sTestAttribNameFloat, g_sTestAttribValue))
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_SetFromStringValue returned false for float attribute");
-		return;
-	}
-
-	Address pCEconItemAttribute = TF2Attrib_GetByName(entity, g_sTestAttribNameFloat);
-
-	if (!pCEconItemAttribute)
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_GetByName returned Address_Null");
-		return;
-	}
-
-	float fValue = TF2Attrib_GetValue(pCEconItemAttribute);
-
-	if (fValue != g_fTestAttribValue)
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_SetFromStringValue resulted in value %f, expected %f", fValue, g_fTestAttribValue);
-		return;
-	}
-
-	if (!TF2Attrib_RemoveByName(entity, g_sTestAttribNameFloat))
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_RemoveByName failed");
-		return;
-	}
-
-	char sTestStringValue[] = "2007-10-10 21:09:46";
-	char sSValue[sizeof(sTestStringValue)];
-
-	LogTest(client, LogType_Info, "TF2Attrib_SetFromStringValue non-networked '%s' to value '%s'", g_sTestAttribNameString, sTestStringValue);
-	if (!TF2Attrib_SetFromStringValue(entity, g_sTestAttribNameString, sTestStringValue))
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_SetFromStringValue returned false for string attribute");
-		return;
-	}
-
-	pCEconItemAttribute = TF2Attrib_GetByName(entity, g_sTestAttribNameString);
-
-	if (!pCEconItemAttribute)
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_GetByName returned Address_Null for string attribute");
-		return;
-	}
-
-	fValue = TF2Attrib_GetValue(pCEconItemAttribute);
-	LogTest(client, LogType_Info, "TF2Attrib_UnsafeGetStringValue on runtime m_flValue, which is storing virtual address %u", fValue);
-	TF2Attrib_UnsafeGetStringValue(fValue, sSValue, sizeof(sSValue));
-
-	if (strncmp(sSValue, sTestStringValue, sizeof(sTestStringValue)) != 0)
-	{
-		LogTest(client, LogType_Failed, "TF2Attrib_SetFromStringValue resulted in string value '%s', expected '%s'", sSValue, sTestStringValue);
-		return;
-	}
-
-	TF2Attrib_SetFromStringValue(entity, g_sTestAttribNameString, "");
 
 	LogTest(client, LogType_Passed, sTest);
 }

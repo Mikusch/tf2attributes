@@ -21,20 +21,6 @@ Adds the game's "attribute hook" mechanism that collates values using an attribu
 float damageBonus = TF2Attrib_HookValueFloat(1.0, "mult_dmg", weapon);
 ```
 
-Support for setting / getting attribute values via strings:
-
-```sourcepawn
-// set an entity's custom projectile model:
-TF2Attrib_SetFromStringValue(entity, "custom projectile model", "models/weapons/c_models/c_grenadelauncher/c_grenadelauncher.mdl");
-
-// get the name from an item:
-TF2Attrib_HookValueString("NO NAME", "custom_name_attr", entity, buffer, sizeof(buffer));
-```
-
-Setting custom names / descriptions is not possible.  String values that are set by this plugin
-are not replicated to the client &mdash; this is fine for attributes that are only accessed on
-the server, but if you set any that the client will read, the client will crash on access.
-
 ## Installing or updating to 1.7
 
 All plugins compiled for previous versions should continue to work with this one.
