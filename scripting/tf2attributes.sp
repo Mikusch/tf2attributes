@@ -419,7 +419,6 @@ public void OnPluginStart() {
 	StartPrepSDKCall(SDKCall_Raw);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "CAttributeList::RemoveAttribute");
 	PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain);	//const CEconItemAttributeDefinition *pAttrDef
-	PrepSDKCall_SetReturnInfo(SDKType_Address, SDKPass_Plain);	//not a clue what this return is
 	hSDKRemoveAttribute = EndPrepSDKCall();
 	if (!hSDKRemoveAttribute) {
 		SetFailState("Could not initialize call to CAttributeList::RemoveAttribute");
@@ -442,7 +441,6 @@ public void OnPluginStart() {
 
 	StartPrepSDKCall(SDKCall_Raw);
 	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "CAttributeList::DestroyAllAttributes");
-	PrepSDKCall_SetReturnInfo(SDKType_Address, SDKPass_Plain);
 	hSDKDestroyAllAttributes = EndPrepSDKCall();
 	if (!hSDKDestroyAllAttributes) {
 		SetFailState("Could not initialize call to CAttributeList::DestroyAllAttributes");
@@ -730,7 +728,8 @@ public int Native_GetStaticAttribs(Handle plugin, int numParams) {
 		return -1;
 	}
 
-	Address pItemDef = SDKCall(hSDKGetItemDefinition, pSchema, iItemDefIndex);
+	Address pItemDef;
+	SDKCall(hSDKGetItemDefinition, pSchema, pItemDef, iItemDefIndex);
 	AssertValidAddress(pItemDef);
 
 	int[] iAttribIndices = new int[size];
@@ -761,7 +760,8 @@ static int GetSOCAttribs(int iEntity, int[] iAttribIndices, AttribData[] attribD
 	}
 
 	// pEconItem may be null if the item doesn't have SOC data (i.e., not from the item server)
-	Address pEconItem = SDKCall(hSDKGetSOCData, pEconItemView);
+	Address pEconItem;
+	SDKCall(hSDKGetSOCData, pEconItemView, pEconItem);
 	if (!pEconItem) {
 		return 0;
 	}
@@ -935,13 +935,13 @@ public int Native_SetAttribStringByName(Handle plugin, int numParams) {
 /* native Address TF2Attrib_GetByName(int iEntity, char[] strAttrib); */
 public int Native_GetAttrib(Handle plugin, int numParams) {
 	// There is a CAttributeList::GetByName, wonder why this is being done instead...
-	int entity = GetNativeCell(1);
+	int entity = GetNativeCell(2);
 	if (!IsValidEntity(entity)) {
 		return ThrowNativeError(SP_ERROR_NATIVE, "Entity %d (%d) is invalid", EntIndexToEntRef(entity), entity);
 	}
 
 	char strAttrib[MAX_ATTRIBUTE_NAME_LENGTH];
-	GetNativeString(2, strAttrib, sizeof(strAttrib));
+	GetNativeString(3, strAttrib, sizeof(strAttrib));
 
 	Address pEntAttributeList = GetEntityAttributeList(entity);
 	if (!pEntAttributeList) {
@@ -952,24 +952,29 @@ public int Native_GetAttrib(Handle plugin, int numParams) {
 	if (!GetAttributeDefIndexByName(strAttrib, iDefIndex)) {
 		return ThrowNativeError(SP_ERROR_NATIVE, "Attribute name '%s' is invalid", strAttrib);
 	}
-	return SDKCall(hSDKGetAttributeByID, pEntAttributeList, iDefIndex);
+
+	Address pAttrib;
+	SDKCall(hSDKGetAttributeByID, pEntAttributeList, pAttrib, iDefIndex);
+	return SetNativeReturnAddress(pAttrib);
 }
 
 /* native Address TF2Attrib_GetByDefIndex(int iEntity, int iDefIndex); */
 public int Native_GetAttribByID(Handle plugin, int numParams) {
-	int entity = GetNativeCell(1);
+	int entity = GetNativeCell(2);
 	if (!IsValidEntity(entity)) {
 		return ThrowNativeError(SP_ERROR_NATIVE, "Entity %d (%d) is invalid", EntIndexToEntRef(entity), entity);
 	}
 
-	int iDefIndex = GetNativeCell(2);
+	int iDefIndex = GetNativeCell(3);
 
 	Address pEntAttributeList = GetEntityAttributeList(entity);
 	if (!pEntAttributeList) {
-		return 0;
+		return SetNativeReturnAddress(Address_Null);
 	}
 
-	return SDKCall(hSDKGetAttributeByID, pEntAttributeList, iDefIndex);
+	Address pAttrib;
+	SDKCall(hSDKGetAttributeByID, pEntAttributeList, pAttrib, iDefIndex);
+	return SetNativeReturnAddress(pAttrib);
 }
 
 /* native bool TF2Attrib_RemoveByName(int iEntity, char[] strAttrib); */
@@ -1037,7 +1042,7 @@ public int Native_RemoveAll(Handle plugin, int numParams) {
 
 /* native void TF2Attrib_SetDefIndex(Address pAttrib, int iDefIndex); */
 public int Native_SetID(Handle plugin, int numParams) {
-	Address pAttrib = GetNativeCell(1);
+	Address pAttrib = GetNativeAddress(1);
 	int iDefIndex = GetNativeCell(2);
 	StoreToAddress(pAttrib + g_CEconItemAttribute.m_iAttributeDefinitionIndex, iDefIndex, NumberType_Int16);
 	return iDefIndex;
@@ -1045,13 +1050,13 @@ public int Native_SetID(Handle plugin, int numParams) {
 
 /* native int TF2Attrib_GetDefIndex(Address pAttrib); */
 public int Native_GetID(Handle plugin, int numParams) {
-	Address pAttrib = GetNativeCell(1);
+	Address pAttrib = GetNativeAddress(1);
 	return LoadFromAddress(pAttrib + g_CEconItemAttribute.m_iAttributeDefinitionIndex, NumberType_Int16);
 }
 
 /* native void TF2Attrib_SetValue(Address pAttrib, float flValue); */
 public int Native_SetVal(Handle plugin, int numParams) {
-	Address pAttrib = GetNativeCell(1);
+	Address pAttrib = GetNativeAddress(1);
 	int flVal = GetNativeCell(2);	//It's a float but avoiding tag mismatch warnings from StoreToAddress
 	StoreToAddress(pAttrib + g_CEconItemAttribute.m_flValue, flVal, NumberType_Int32);
 	return flVal;
@@ -1059,15 +1064,23 @@ public int Native_SetVal(Handle plugin, int numParams) {
 
 /* native float TF2Attrib_GetValue(Address pAttrib); */
 public int Native_GetVal(Handle plugin, int numParams) {
-	Address pAttrib = GetNativeCell(1);
+	Address pAttrib = GetNativeAddress(1);
 	return LoadFromAddress(pAttrib + g_CEconItemAttribute.m_flValue, NumberType_Int32);
 }
 
 /* TF2Attrib_UnsafeGetStringValue(any pRawValue, char[] buffer, int maxlen); */
 public int Native_GetStringVal(Handle plugin, int numParams) {
+	int maxlen = GetNativeCell(3), length;
+
+	if (Is64Bit()) {
+		if (maxlen > 0) {
+			SetNativeString(2, "", maxlen);
+		}
+		return 0;
+	}
+
 	Address pRawValue = GetNativeCell(1);
 
-	int maxlen = GetNativeCell(3), length;
 	char[] buffer = new char[maxlen];
 
 	ReadStringAttributeValue(pRawValue, buffer, maxlen);
@@ -1077,7 +1090,7 @@ public int Native_GetStringVal(Handle plugin, int numParams) {
 
 /* native void TF2Attrib_SetRefundableCurrency(Address pAttrib, int nCurrency); */
 public int Native_SetCurrency(Handle plugin, int numParams) {
-	Address pAttrib = GetNativeCell(1);
+	Address pAttrib = GetNativeAddress(1);
 	int nCurrency = GetNativeCell(2);
 	StoreToAddress(pAttrib + g_CEconItemAttribute.m_nRefundableCurrency, nCurrency, NumberType_Int32);
 	return nCurrency;
@@ -1085,7 +1098,7 @@ public int Native_SetCurrency(Handle plugin, int numParams) {
 
 /* native int TF2Attrib_GetRefundableCurrency(Address pAttrib); */
 public int Native_GetCurrency(Handle plugin, int numParams) {
-	Address pAttrib = GetNativeCell(1);
+	Address pAttrib = GetNativeAddress(1);
 	return LoadFromAddress(pAttrib + g_CEconItemAttribute.m_nRefundableCurrency, NumberType_Int32);
 }
 
@@ -1272,8 +1285,8 @@ public int Native_HookValueString(Handle plugin, int numParams) {
 	if (hSDKAttributeApplyStringWrapperWindows) {
 		// windows version; hidden ptr pushes params, `this` still in correct register
 		Address result;
-		pOutput = SDKCall(hSDKAttributeApplyStringWrapperWindows,
-			GetEntityAttributeManager(entity), result, pInput, entity, pAttrClass, Address_Null);
+		SDKCall(hSDKAttributeApplyStringWrapperWindows,
+			GetEntityAttributeManager(entity), pOutput, result, pInput, entity, pAttrClass, Address_Null);
 
 		// read from the output string_t
 		LoadStringFromAddress(LoadAddressFromAddress(pOutput), output, buflen);
@@ -1281,14 +1294,14 @@ public int Native_HookValueString(Handle plugin, int numParams) {
 	} else if (hSDKAttributeApplyStringWrapperLinux) {
 		if (Is64Bit()) {
 			// linux64 version
-			pOutput = SDKCall(hSDKAttributeApplyStringWrapperLinux, GetEntityAttributeManager(entity),
+			SDKCall(hSDKAttributeApplyStringWrapperLinux, pOutput, GetEntityAttributeManager(entity),
 				pInput, entity, pAttrClass, Address_Null);
 
 			LoadStringFromAddress(pOutput, output, buflen);
 		} else {
 			// linux version; hidden ptr moves the stack and this forward
 			Address result;
-			pOutput = SDKCall(hSDKAttributeApplyStringWrapperLinux, result,
+			SDKCall(hSDKAttributeApplyStringWrapperLinux, pOutput, result,
 				GetEntityAttributeManager(entity), pInput, entity, pAttrClass, Address_Null);
 
 			LoadStringFromAddress(LoadAddressFromAddress(pOutput), output, buflen);
@@ -1303,7 +1316,9 @@ public int Native_HookValueString(Handle plugin, int numParams) {
 /* helper functions */
 
 static Address GetItemSchema() {
-	return SDKCall(hSDKSchema);
+	Address pSchema;
+	SDKCall(hSDKSchema, pSchema);
+	return pSchema;
 }
 
 static Address GetEntityEconItemView(int entity) {
@@ -1336,7 +1351,7 @@ static Address GetAttributeDefinitionByName(const char[] name) {
 	if (!pSchema) {
 		return Address_Null;
 	}
-	cachedResult = SDKCall(hSDKGetAttributeDefByName, pSchema, name);
+	SDKCall(hSDKGetAttributeDefByName, pSchema, cachedResult, name);
 	StringMap_SetAddress(g_AttributeDefinitionMapping, name, cachedResult);
 	return cachedResult;
 }
@@ -1346,7 +1361,9 @@ static Address GetAttributeDefinitionByID(int id) {
 	if (!pSchema) {
 		return Address_Null;
 	}
-	return SDKCall(hSDKGetAttributeDef, pSchema, id);
+	Address pAttrDef;
+	SDKCall(hSDKGetAttributeDef, pSchema, pAttrDef, id);
+	return pAttrDef;
 }
 
 /**
@@ -1667,7 +1684,21 @@ stock void Address_ToIntArray(Address addr, int arr[2]) {
 }
 
 stock Address IntArray_ToAddress(const int arr[2]) {
-	return view_as<Address>(arr[0]) | (view_as<Address>(arr[1]) << 32);
+	Address low = view_as<Address>(arr[0]) & ((view_as<Address>(1) << 32) - view_as<Address>(1));
+	return low | (view_as<Address>(arr[1]) << 32);
+}
+
+stock Address GetNativeAddress(int param) {
+	int arr[2];
+	GetNativeArray(param, arr, 2);
+	return IntArray_ToAddress(arr);
+}
+
+stock int SetNativeReturnAddress(Address value) {
+	int arr[2];
+	Address_ToIntArray(value, arr);
+	SetNativeArray(1, arr, 2);
+	return view_as<int>(value);
 }
 
 stock bool StringMap_GetAddress(StringMap map, const char[] key, Address &value) {
