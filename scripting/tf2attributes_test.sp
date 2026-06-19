@@ -27,7 +27,6 @@ public Plugin myinfo =
 #define MAJOR_MOVE_SPEED_BONUS_VALUE 3.0
 
 #define ATTR_DAMAGE_CAUSES_AIRBLAST 522
-#define ATTR_DAMAGE_CAUSES_AIRBLAST_VALUE 1
 
 #define ATTR_MIN_VIEWMODEL_OFFSET 796 // "min_viewmodel_offset", "string" type that generally all weapons have
 
@@ -46,9 +45,7 @@ int g_iTestWarnings;
 
 // items_game.txt: "stored_as_integer"	"1"
 static const char g_sTestAttribNameInt[] = "damage causes airblast";
-static const char g_sTestAttribClassInt[] = "damage_causes_airblast";
 const int g_iTestAttribDefIndexInt = ATTR_DAMAGE_CAUSES_AIRBLAST;
-const int g_iTestAttribValue = ATTR_DAMAGE_CAUSES_AIRBLAST_VALUE;
 
 // items_game.txt: "stored_as_integer"	"0"
 static const char g_sTestAttribNameFloat[] = "major move speed bonus";
@@ -99,6 +96,8 @@ Action Command_TestTF2Attributes(int client, int args)
 	Test_TF2Attrib_SetFromStringValue(client, iWeapon); // TF2Attrib_SetFromStringValue, TF2Attrib_UnsafeGetStringValue
 	Test_TF2Attrib_SetRefundableCurrency(client, iWeapon); // TF2Attrib_SetRefundableCurrency, TF2Attrib_GetRefundableCurrency
 	Test_TF2Attrib_SetGet_ClearCache(client, iWeapon); // TF2Attrib_SetDefIndex, TF2Attrib_GetDefIndex, TF2Attrib_SetValue, TF2Attrib_ClearCache
+	Test_TF2Attrib_MultipleAttributes(client, iWeapon); // TF2Attrib_SetByDefIndex, TF2Attrib_ListDefIndices, TF2Attrib_GetByDefIndex with multiple runtime attributes
+	Test_TF2Attrib_HookValueStress(client, iWeapon); // TF2Attrib_HookValueFloat, TF2Attrib_HookValueString repeated-call stress
 	Test_TF2Attrib_RemoveAll(client, iWeapon); // TF2Attrib_RemoveAll
 
 	char sSummaryFormat[] = LOG_PREFIX ... "Summary: Passed: %d/%d, Warnings: %d";
@@ -425,25 +424,28 @@ void Test_TF2Attrib_HookValueInt(int client, int entity)
 	char sTest[] = "TF2Attrib_HookValueInt";
 	LogTest(client, LogType_Start, sTest);
 
-	if (!TF2Attrib_SetByName(entity, g_sTestAttribNameInt, view_as<float>(g_iTestAttribValue)))
+	if (!TF2Attrib_SetByName(entity, g_sTestAttribNameFloat, g_fTestAttribValue))
 	{
-		LogTest(client, LogType_Failed, "TF2Attrib_SetByName");
+		LogTest(client, LogType_Failed, "TF2Attrib_SetByName returned false");
 		return;
 	}
 
-	LogTest(client, LogType_Info, "TF2Attrib_HookValueInt on attribute_class '%s'", g_sTestAttribClassInt);
-	int iInitial = 1;
-	int iValue = TF2Attrib_HookValueInt(iInitial, g_sTestAttribClassInt, entity);
+	// the hooked result must differ from the initial for this to test anything, so use a non-zero initial with
+	// a multiplicative attribute; that also exercises the float-to-int conversion the int native does on the way out
+	LogTest(client, LogType_Info, "TF2Attrib_HookValueInt on attribute_class '%s'", g_sTestAttribClassFloat);
+	int iInitial = 2;
+	int iValue = TF2Attrib_HookValueInt(iInitial, g_sTestAttribClassFloat, entity);
 
-	if (!TF2Attrib_RemoveByName(entity, g_sTestAttribNameInt))
+	if (!TF2Attrib_RemoveByName(entity, g_sTestAttribNameFloat))
 	{
-		LogTest(client, LogType_Failed, "TF2Attrib_RemoveByName");
+		LogTest(client, LogType_Failed, "TF2Attrib_RemoveByName returned false");
 		return;
 	}
 
-	if (iValue != g_iTestAttribValue)
+	int iExpected = RoundToNearest(float(iInitial) * g_fTestAttribValue);
+	if (iValue != iExpected)
 	{
-		LogTest(client, LogType_Failed, "TF2Attrib_HookValueInt returned %d, expected %d", iValue, g_iTestAttribValue);
+		LogTest(client, LogType_Failed, "TF2Attrib_HookValueInt returned %d, expected %d", iValue, iExpected);
 		return;
 	}
 
@@ -671,6 +673,116 @@ void Test_TF2Attrib_SetFromStringValue(int client, int entity)
 
 	TF2Attrib_SetFromStringValue(entity, g_sTestAttribNameString, "");
 
+	LogTest(client, LogType_Passed, sTest);
+}
+
+void Test_TF2Attrib_MultipleAttributes(int client, int entity)
+{
+	char sTest[] = "Multiple runtime attributes (TF2Attrib_ListDefIndices stride, CUtlVector growth)";
+	LogTest(client, LogType_Start, sTest);
+
+	// storing several runtime attributes at once exercises reading past the first list element, covering the
+	// CEconItemAttribute stride and the CUtlVector growth path rather than just the single-element case
+	int iDefIndices[] = { ATTR_MAJOR_MOVE_SPEED_BONUS, ATTR_DAMAGE_CAUSES_AIRBLAST, ATTR_HEALTH_REGEN };
+	float fValues[] = { 3.0, 1.0, 5.0 };
+	int iCount = sizeof(iDefIndices);
+
+	for (int i = 0; i < iCount; i++)
+	{
+		if (!TF2Attrib_SetByDefIndex(entity, iDefIndices[i], fValues[i]))
+		{
+			LogTest(client, LogType_Failed, "TF2Attrib_SetByDefIndex returned false for %d", iDefIndices[i]);
+			TF2Attrib_RemoveAll(entity);
+			return;
+		}
+	}
+
+	int iAttribIndices[TF2ATTRIB_MAX_ITEM_ATTRIBUTES];
+	int iNumAttr = TF2Attrib_ListDefIndices(entity, iAttribIndices);
+	LogTest(client, LogType_Info, "TF2Attrib_ListDefIndices iNumAttr: %d", iNumAttr);
+
+	for (int i = 0; i < iCount; i++)
+	{
+		// every attribute we set must come back from ListDefIndices, which walks the list by element
+		// stride; a wrong stride reads garbage for everything past the first entry
+		bool bListed = false;
+		for (int j = 0; j < iNumAttr; j++)
+		{
+			if (iAttribIndices[j] == iDefIndices[i])
+			{
+				bListed = true;
+				break;
+			}
+		}
+
+		if (!bListed)
+		{
+			LogTest(client, LogType_Failed, "TF2Attrib_ListDefIndices did not return attribute %d", iDefIndices[i]);
+			TF2Attrib_RemoveAll(entity);
+			return;
+		}
+
+		Address pCEconItemAttribute = TF2Attrib_GetByDefIndex(entity, iDefIndices[i]);
+		if (!pCEconItemAttribute)
+		{
+			LogTest(client, LogType_Failed, "TF2Attrib_GetByDefIndex returned Address_Null for %d", iDefIndices[i]);
+			TF2Attrib_RemoveAll(entity);
+			return;
+		}
+
+		float fValue = TF2Attrib_GetValue(pCEconItemAttribute);
+		if (fValue != fValues[i])
+		{
+			LogTest(client, LogType_Failed, "TF2Attrib_GetValue for %d returned %f, expected %f", iDefIndices[i], fValue, fValues[i]);
+			TF2Attrib_RemoveAll(entity);
+			return;
+		}
+
+		LogTest(client, LogType_Info, "TF2Attrib_GetByDefIndex %d = %f", iDefIndices[i], fValue);
+	}
+
+	TF2Attrib_RemoveAll(entity);
+
+	LogTest(client, LogType_Passed, sTest);
+}
+
+void Test_TF2Attrib_HookValueStress(int client, int entity)
+{
+	char sTest[] = "TF2Attrib_HookValue repeated-call stress";
+	LogTest(client, LogType_Start, sTest);
+
+	if (!TF2Attrib_SetByName(entity, g_sTestAttribNameFloat, g_fTestAttribValue))
+	{
+		LogTest(client, LogType_Failed, "TF2Attrib_SetByName returned false");
+		return;
+	}
+
+	// hammer the hooks to shake out a calling-convention or stack imbalance and pooled-string leaks that a
+	// single call hides, mainly the windows64 hidden-return-pointer path used by the string hook
+	int iIterations = 1000;
+	float fExpected = 2.0 * g_fTestAttribValue;
+	char sNameTag[64];
+
+	for (int i = 0; i < iIterations; i++)
+	{
+		float fValue = TF2Attrib_HookValueFloat(2.0, g_sTestAttribClassFloat, entity);
+		if (fValue != fExpected)
+		{
+			LogTest(client, LogType_Failed, "TF2Attrib_HookValueFloat returned %f on iteration %d, expected %f", fValue, i, fExpected);
+			TF2Attrib_RemoveByName(entity, g_sTestAttribNameFloat);
+			return;
+		}
+
+		TF2Attrib_HookValueString(" yip!", "custom_name_attr", entity, sNameTag, sizeof(sNameTag));
+	}
+
+	if (!TF2Attrib_RemoveByName(entity, g_sTestAttribNameFloat))
+	{
+		LogTest(client, LogType_Failed, "TF2Attrib_RemoveByName returned false");
+		return;
+	}
+
+	LogTest(client, LogType_Info, "Completed %d hook iterations with no errors or crash", iIterations);
 	LogTest(client, LogType_Passed, sTest);
 }
 

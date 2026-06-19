@@ -161,14 +161,13 @@
 			}
 			"CAttributeManager::ApplyAttributeStringWrapper"
 			{
-				// uses a hidden pointer, which ends up looking something like this monstrosity:
-				// (string_t* returnValue, CAttributeManager* this, string_t input, CBaseEntity* initiator, string_t classname, CUtlVector<CBaseEntity*>* entityList), returns string_t
-				// windows32 uses a (mostly) standard calling convention so we use the vtable call for that
-				// windows64 must use a signature (hidden return pointer before `this` on x64)
+				// returns string_t by value through a hidden return pointer on every platform except linux64 (which returns it in a register)
+				// both windows builds use a normal thiscall: `this` stays in (e/r)cx and the hidden pointer is just the first explicit parameter (rdx on x64)
+				// so windows32 resolves the address from the vtable and windows64 needs this signature (the vtable index isn't stable across builds)
 				"library"			"server"
 				"linux"				"@_ZN17CAttributeManager27ApplyAttributeStringWrapperE8string_tP11CBaseEntityS0_P10CUtlVectorIS2_10CUtlMemoryIS2_iEE"
 				"linux64"			"@_ZN17CAttributeManager27ApplyAttributeStringWrapperE8string_tP11CBaseEntityS0_P10CUtlVectorIS2_10CUtlMemoryIS2_iEE"
-				// "windows64"		"\x2A..." // TODO
+				"windows64"			"\x48\x89\x5C\x24\x10\x48\x89\x6C\x24\x18\x48\x89\x74\x24\x20\x57\x41\x56\x41\x57\x48\x83\xEC\x30\x48\x8B\x1D\x2A\x2A\x2A\x2A\x4D\x8B\xF1\x49\x8B\xF8\x4C\x8B\xFA\x48\x8B\xF1"
 			}
 			"CTFPlayer::AddCustomAttribute" //(const char*, float, float), returns void
 			{

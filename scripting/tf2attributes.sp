@@ -516,34 +516,34 @@ public void OnPluginStart() {
 	}
 
 	// returns string_t by value through a hidden return pointer on every platform except linux64 (which returns it in a register)
-	// a static call lets us place that pointer before `this`, which is mandatory on windows64 (a vtable/thiscall would force`this` into the register the hidden pointer needs)
-	// we use the signature for linux32/linux64/windows64, windows32 uses a vcall
-	StartPrepSDKCall(SDKCall_Static);
-	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "CAttributeManager::ApplyAttributeStringWrapper");
-	PrepSDKCall_SetReturnInfo(SDKType_Address, SDKPass_Plain); // return string_t
-	if (g_OS != OS_Linux64) // linux64 returns string_t in a register, everyone else uses a hidden return pointer
-		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL); // return value
-	PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain); // thisptr
-	PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain, VDECODE_FLAG_ALLOWNULL); // string_t initial value
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // initator entity (should contain thisptr)
-	PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain); // string_t attribute class
-	PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain, VDECODE_FLAG_ALLOWNULL); // CUtlVector<CBaseEntity*>, set to nullptr
-	hSDKAttributeApplyStringWrapperSig = EndPrepSDKCall();
-
-	if (!hSDKAttributeApplyStringWrapperSig && g_OS == OS_Windows) {
-		// windows vcall. `this` stays in ECX and the hidden return pointer is the first stack argument
+	// both windows builds use a normal thiscall: `this` stays in (e/r)cx and the hidden pointer is just the first explicit parameter (first stack arg on x86, rdx on x64)
+	// so windows32 resolves the address from the vtable and windows64 from a signature (the vtable index isn't stable across builds)
+	// linux32/linux64 use a static call so the hidden pointer (linux32) can sit before `this`
+	if (g_OS == OS_Windows || g_OS == OS_Windows64) {
 		StartPrepSDKCall(SDKCall_Raw);
-		PrepSDKCall_SetFromConf(hGameConf, SDKConf_Virtual, "CAttributeManager::ApplyAttributeStringWrapper");
+		PrepSDKCall_SetFromConf(hGameConf, g_OS == OS_Windows64 ? SDKConf_Signature : SDKConf_Virtual, "CAttributeManager::ApplyAttributeStringWrapper");
 		PrepSDKCall_SetReturnInfo(SDKType_Address, SDKPass_Plain); // return string_t
-		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL); // return value too
+		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL); // hidden return pointer
 		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain, VDECODE_FLAG_ALLOWNULL); // string_t initial value
-		PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // CBaseEntity* entity
+		PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // initiator entity
 		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain); // string_t attribute class
 		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain, VDECODE_FLAG_ALLOWNULL); // CUtlVector<CBaseEntity*>, set to nullptr
 		hSDKAttributeApplyStringWrapperVtable = EndPrepSDKCall();
+	} else {
+		StartPrepSDKCall(SDKCall_Static);
+		PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "CAttributeManager::ApplyAttributeStringWrapper");
+		PrepSDKCall_SetReturnInfo(SDKType_Address, SDKPass_Plain); // return string_t
+		if (g_OS != OS_Linux64) // linux64 returns string_t in a register, linux32 uses a hidden return pointer
+			PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Pointer, VDECODE_FLAG_ALLOWNULL); // hidden return pointer
+		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain); // thisptr
+		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain, VDECODE_FLAG_ALLOWNULL); // string_t initial value
+		PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer); // initiator entity
+		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain); // string_t attribute class
+		PrepSDKCall_AddParameter(SDKType_Address, SDKPass_Plain, VDECODE_FLAG_ALLOWNULL); // CUtlVector<CBaseEntity*>, set to nullptr
+		hSDKAttributeApplyStringWrapperSig = EndPrepSDKCall();
 	}
 
-	if (!hSDKAttributeApplyStringWrapperSig && !hSDKAttributeApplyStringWrapperVtable && g_OS != OS_Windows64) {
+	if (!hSDKAttributeApplyStringWrapperSig && !hSDKAttributeApplyStringWrapperVtable) {
 		SetFailState("Could not initialize call to CAttributeManager::ApplyAttributeStringWrapper");
 	}
 
@@ -1243,7 +1243,7 @@ public int Native_HookValueString(Handle plugin, int numParams) {
 
 	Address pOutput;
 	if (hSDKAttributeApplyStringWrapperVtable) {
-		// windows32; hidden ptr is the first stack arg, `this` stays in ECX
+		// windows32/windows64 thiscall; hidden return pointer is the first explicit arg, `this` stays in (e/r)cx
 		Address result;
 		SDKCall(hSDKAttributeApplyStringWrapperVtable, GetEntityAttributeManager(entity), pOutput, result, pInput, entity, pAttrClass, Address_Null);
 
@@ -1257,7 +1257,7 @@ public int Native_HookValueString(Handle plugin, int numParams) {
 		LoadStringFromAddress(pOutput, output, buflen);
 
 	} else {
-		// linux32 / windows64; hidden return pointer first, then thisptr
+		// linux32; hidden return pointer first, then thisptr
 		Address result;
 		SDKCall(hSDKAttributeApplyStringWrapperSig, pOutput, result, GetEntityAttributeManager(entity), pInput, entity, pAttrClass, Address_Null);
 
@@ -1371,7 +1371,7 @@ static bool InitializeAttributeValue(Address pAttributeList, int attrdef, const 
 		Address rawAttributeValue = GetHeapManagedAttributeString(attrdef, value); // This assumes the union value type will be a pointer
 
 		if (rawAttributeValue != Address_Null) {
-			// Truncates the upper 32 bits of the address; only safe on 32-bit where addresses fit in 4 bytes.
+			// x86 only -- this lops off the high 32 bits of the pointer
 			SDKCall(hSDKSetRuntimeValue, pAttributeList, pAttrDef, view_as<float>(view_as<int>(rawAttributeValue)));
 			return true;
 		}
@@ -1395,7 +1395,7 @@ static bool InitializeAttributeValue(Address pAttributeList, int attrdef, const 
 			return false;
 		}
 
-		// Truncates the upper 32 bits of the address; only safe on 32-bit where addresses fit in 4 bytes.
+		// same deal -- truncates to 32 bits, so x86 only
 		SDKCall(hSDKSetRuntimeValue, pAttributeList, pAttrDef, view_as<float>(view_as<int>(rawAttributeValue)));
 
 		// add to our managed values
