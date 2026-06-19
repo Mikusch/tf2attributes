@@ -1,6 +1,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
+#include <tf2_stocks>
 #include <tf2attributes>
 
 public Plugin myinfo =
