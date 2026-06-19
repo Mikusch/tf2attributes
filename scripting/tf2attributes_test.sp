@@ -150,7 +150,7 @@ void Test_TF2Attrib_SetByName(int client, int entity)
 		return;
 	}
 
-	LogTest(client, LogType_Info, "TF2Attrib_GetValue virtual address %u", pCEconItemAttribute);
+	LogTest(client, LogType_Info, "TF2Attrib_GetValue virtual address 0x%lX", pCEconItemAttribute);
 	float fValue = TF2Attrib_GetValue(pCEconItemAttribute);
 
 	if (fValue != g_fTestAttribValue)
@@ -198,7 +198,7 @@ void Test_TF2Attrib_SetByDefIndex(int client, int entity)
 		return;
 	}
 
-	LogTest(client, LogType_Info, "TF2Attrib_GetValue virtual address %u", pCEconItemAttribute);
+	LogTest(client, LogType_Info, "TF2Attrib_GetValue virtual address 0x%lX", pCEconItemAttribute);
 	float fValue = TF2Attrib_GetValue(pCEconItemAttribute);
 
 	if (fValue != g_fTestAttribValue)
@@ -443,7 +443,7 @@ void Test_TF2Attrib_SetRefundableCurrency(int client, int entity)
 	LogTest(client, LogType_Info, "TF2Attrib_SetRefundableCurrency to %d", iSetCurrency);
 	TF2Attrib_SetRefundableCurrency(pCEconItemAttribute, iSetCurrency);
 
-	LogTest(client, LogType_Info, "TF2Attrib_GetRefundableCurrency on virtual address %u", pCEconItemAttribute);
+	LogTest(client, LogType_Info, "TF2Attrib_GetRefundableCurrency on virtual address 0x%lX", pCEconItemAttribute);
 	int iCurrency = TF2Attrib_GetRefundableCurrency(pCEconItemAttribute);
 
 	if (iCurrency != iSetCurrency)
@@ -474,7 +474,7 @@ void Test_TF2Attrib_SetGet_ClearCache(int client, int entity)
 		return;
 	}
 
-	LogTest(client, LogType_Info, "TF2Attrib_GetDefIndex virtual address %u", pCEconItemAttribute);
+	LogTest(client, LogType_Info, "TF2Attrib_GetDefIndex virtual address 0x%lX", pCEconItemAttribute);
 	int iDefIndex = TF2Attrib_GetDefIndex(pCEconItemAttribute);
 
 	if (iDefIndex != g_iTestAttribDefIndexFloat)

@@ -181,7 +181,7 @@ enum struct CEconItemDefinition {
 		// this.m_nDefaultDropQuantity = this.m_nItemRarity + 1;
 		// this.m_unItemSeries = this.m_nDefaultDropQuantity + 2; // +m_nDefaultDropQuantity(1) + pad(1)
 		this.m_vecStaticAttributes = 5 * Address_PointerSize + 8; // 2 pointers + 2 u16s + pad(PS-4) + pointer + 7 u8s + pad(1) + u16 + pad(PS-2): CUtlVector<static_attrib_t>
-		this.m_vecStaticAttributes_m_Size = this.m_vecStaticAttributes + Address_PointerSize + 8; // +sizeof(CUtlMemory): m_pMemory(PS) + m_nAllocationCount(4) + m_nGrowSize(4) -- NOTE: original 64-bit value was 56; verify against source/decompile
+		this.m_vecStaticAttributes_m_Size = this.m_vecStaticAttributes + Address_PointerSize + 8; // +sizeof(CUtlMemory): m_pMemory(PS) + m_nAllocationCount(4) + m_nGrowSize(4) -> 0x28 (x86) / 0x40 (x64)
 		// this.m_nPopularitySeed = this.m_vecStaticAttributes_m_Size + 2 * Address_PointerSize; // +m_Size(4) + pad(PS-4) + m_pElements(PS)
 		// this.m_pszItemBaseName = this.m_nPopularitySeed + Address_PointerSize; // +m_nPopularitySeed(4) + pad(PS-4)
 		// this.m_bProperName = this.m_pszItemBaseName + Address_PointerSize;

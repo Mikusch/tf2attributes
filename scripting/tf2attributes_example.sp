@@ -459,7 +459,7 @@ public Action Command_GetAttrByName(int client, int args)
 	if (TF2Attrib_IsIntegerValue(idx)) result = float(view_as<int>(result));
 	float init;// = TF2Attrib_GetInitialValue(pAttrib);
 	if (TF2Attrib_IsIntegerValue(idx)) init = float(view_as<int>(init));
-	ReplyToCommand(client, "[SM] GetAttrib got: %08X %d ; %6.2f, %6.2f, %d, %d for attrib '%s' on %s%d", view_as<int>(pAttrib), idx, result, init, TF2Attrib_GetRefundableCurrency(pAttrib), 0 /*TF2Attrib_GetIsSetBonus(pAttrib)*/, arg2, tgt == target ? "" : "active wep of ", target);//, target);
+	ReplyToCommand(client, "[SM] GetAttrib got: 0x%lX %d ; %6.2f, %6.2f, %d, %d for attrib '%s' on %s%d", pAttrib, idx, result, init, TF2Attrib_GetRefundableCurrency(pAttrib), 0 /*TF2Attrib_GetIsSetBonus(pAttrib)*/, arg2, tgt == target ? "" : "active wep of ", target);//, target);
 	return Plugin_Handled;
 }
 public Action Command_GetAttrByID(int client, int args)
@@ -509,7 +509,7 @@ public Action Command_GetAttrByID(int client, int args)
 	if (TF2Attrib_IsIntegerValue(idx)) result = float(view_as<int>(result));
 	float init;// = TF2Attrib_GetInitialValue(pAttrib);
 	if (TF2Attrib_IsIntegerValue(idx)) init = float(view_as<int>(init));
-	ReplyToCommand(client, "[SM] GetAttrib got: %08X %d ; %6.2f, %6.2f, %d, %d for attrib '%s' on %s%d", view_as<int>(pAttrib), idx, result, init, TF2Attrib_GetRefundableCurrency(pAttrib), 0 /*TF2Attrib_GetIsSetBonus(pAttrib)*/, arg2, tgt == target ? "" : "active wep of ", target);//, target);
+	ReplyToCommand(client, "[SM] GetAttrib got: 0x%lX %d ; %6.2f, %6.2f, %d, %d for attrib '%s' on %s%d", pAttrib, idx, result, init, TF2Attrib_GetRefundableCurrency(pAttrib), 0 /*TF2Attrib_GetIsSetBonus(pAttrib)*/, arg2, tgt == target ? "" : "active wep of ", target);//, target);
 	return Plugin_Handled;
 }
 public Action Command_GetAttrs(int client, int args)
@@ -619,7 +619,7 @@ public Action SetValueStuff(int client, int args)
 		case 3: TF2Attrib_SetRefundableCurrency(addr, StringToInt(arg3));
 //		case 5: TF2Attrib_SetIsSetBonus(addr, !!StringToInt(arg3));
 	}
-	ReplyToCommand(client, "[SM] Set %d on %d to %s", type, addr, arg3);
+	ReplyToCommand(client, "[SM] Set %d on 0x%lX to %s", type, addr, arg3);
 	return Plugin_Handled;
 }
 stock bool IsValidClient(int client)
