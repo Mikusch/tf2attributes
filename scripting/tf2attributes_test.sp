@@ -222,7 +222,7 @@ void Test_TF2Attrib_SetByDefIndex(int client, int entity)
 	}
 
 	LogTest(client, LogType_Info, "TF2Attrib_ListDefIndices entity %d", entity);
-	int iAttribIndices[20];
+	int iAttribIndices[TF2ATTRIB_MAX_ITEM_ATTRIBUTES];
 	int iNumAttr = TF2Attrib_ListDefIndices(entity, iAttribIndices);
 
 	if (iNumAttr <= 0)
@@ -276,8 +276,8 @@ void Test_TF2Attrib_GetStaticAttribs(int client, int iWeapon)
 
 	int iItemDef = GetEntProp(iWeapon, Prop_Send, "m_iItemDefinitionIndex");
 
-	int iAttribIndices[16];
-	float fAttribValues[16];
+	int iAttribIndices[TF2ATTRIB_MAX_ITEM_ATTRIBUTES];
+	float fAttribValues[TF2ATTRIB_MAX_ITEM_ATTRIBUTES];
 
 	LogTest(client, LogType_Info, "TF2Attrib_GetStaticAttribs on iItemDef %d", iItemDef);
 	int iNumAttr = TF2Attrib_GetStaticAttribs(iItemDef, iAttribIndices, fAttribValues);
@@ -315,8 +315,8 @@ void Test_TF2Attrib_GetSOCAttribs(int client, int iWeapon)
 	char sTest[] = "TF2Attrib_GetSOCAttribs";
 	LogTest(client, LogType_Start, sTest);
 
-	int iAttribIndices[16];
-	float fAttribValues[16];
+	int iAttribIndices[TF2ATTRIB_MAX_ITEM_ATTRIBUTES];
+	float fAttribValues[TF2ATTRIB_MAX_ITEM_ATTRIBUTES];
 
 	int iNumAttr = TF2Attrib_GetSOCAttribs(iWeapon, iAttribIndices, fAttribValues);
 

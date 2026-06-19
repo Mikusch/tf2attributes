@@ -660,6 +660,7 @@ public void OnMapEnd() {
 	// because attribute injection's a thing now, we invalidate our internal mappings
 	// in case everything changes during the next map
 	g_AttributeDefinitionMapping.Clear();
+	g_imapAttrIsNetworked.Clear();
 
 	// pooled strings might get purged only between map changes
 	g_AllocPooledStringCache.Clear();
@@ -728,8 +729,9 @@ public int Native_GetStaticAttribs(Handle plugin, int numParams) {
 	int[] iAttribIndices = new int[size];
 	int[] iAttribValues = new int[size];
 	int iCount = GetStaticAttribs(pItemDef, iAttribIndices, iAttribValues, size);
-	SetNativeArray(2, iAttribIndices, size);
-	SetNativeArray(3, iAttribValues, size);	//cast to float on inc side
+	int written = iCount < size ? iCount : size;
+	SetNativeArray(2, iAttribIndices, written);
+	SetNativeArray(3, iAttribValues, written);	//cast to float on inc side
 	return iCount;
 }
 
@@ -807,8 +809,9 @@ public int Native_GetSOCAttribs(Handle plugin, int numParams) {
 	int[] iAttribIndices = new int[size];
 	int[] iAttribValues = new int[size];
 	int iCount = GetSOCAttribs(iEntity, iAttribIndices, iAttribValues, size);
-	SetNativeArray(2, iAttribIndices, size);
-	SetNativeArray(3, iAttribValues, size);	//cast to float on inc side
+	int written = iCount < size ? iCount : size;
+	SetNativeArray(2, iAttribIndices, written);
+	SetNativeArray(3, iAttribValues, written);	//cast to float on inc side
 	return iCount;
 }
 
@@ -1125,7 +1128,8 @@ public int Native_ListIDs(Handle plugin, int numParams) {
 		Address pAttributeEntry = pAttribListData + view_as<Address>(i * g_CEconItemAttribute.iSizeOf);
 		iAttribIndices[i] = LoadFromAddress(pAttributeEntry + g_CEconItemAttribute.m_iAttributeDefinitionIndex, NumberType_Int16);
 	}
-	SetNativeArray(2, iAttribIndices, size);
+	int written = iNumAttribs < size ? iNumAttribs : size;
+	SetNativeArray(2, iAttribIndices, written);
 	return iNumAttribs;
 }
 

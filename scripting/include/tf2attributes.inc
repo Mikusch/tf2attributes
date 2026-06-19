@@ -3,6 +3,8 @@
 #endif
 #define _tf2attributes_included
 
+#define TF2ATTRIB_MAX_ITEM_ATTRIBUTES 20
+
 /**
  * Sets an attribute's value on an entity, adding it if it isn't on the entity.
  *
@@ -196,12 +198,12 @@ native int TF2Attrib_GetRefundableCurrency(Address pAttrib);
  *
  * @param iEntity		Entity index to get attribute list from. Must have m_AttributeList.
  * @param iDefIndices	Array of attribute definition indices found on the entity.
- * @param iMaxLen		Max length of the iDefIndices array, default 20. Does not affect the return value.
+ * @param iMaxLen		Max length of the iDefIndices array, default TF2ATTRIB_MAX_ITEM_ATTRIBUTES. Does not affect the return value.
  *
- * @return				The number of attributes found on the entity's attribute list (max 20 as of Oct 2017), or -1 if some error happened.
+ * @return				The number of attributes found on the entity's attribute list, or -1 if some error happened.
  * @error				Invalid iEntity or iMaxLen.
  */
-native int TF2Attrib_ListDefIndices(int iEntity, int[] iDefIndices, int iMaxLen=20);
+native int TF2Attrib_ListDefIndices(int iEntity, int[] iDefIndices, int iMaxLen=TF2ATTRIB_MAX_ITEM_ATTRIBUTES);
 
 /**
  * Returns arrays containing the static attributes and their values present on an item definition.
@@ -213,12 +215,12 @@ native int TF2Attrib_ListDefIndices(int iEntity, int[] iDefIndices, int iMaxLen=
  * @param iItemDefIndex		Item definition index (e.g. 7 for Shovel) to get static attribute list from.
  * @param iAttribIndices	Array of attribute definition indices found on the item definition.
  * @param flAttribValues	Array of attribute values found on the item definition, corresponding to the indices.
- * @param iMaxLen			Max length of the two arrays passed in, default 16. Does not affect the return value.
+ * @param iMaxLen			Max length of the two arrays passed in, default TF2ATTRIB_MAX_ITEM_ATTRIBUTES. Does not affect the return value.
  *
- * @return					The number of attributes found on the item definition's static attribute list (max 13 as of Apr 2026), or -1 if no schema or item definition found.
+ * @return					The number of attributes found on the item definition's static attribute list, or -1 if no schema or item definition found.
  * @error					Invalid iMaxLen, or gamedata for this function failed to load.
  */
-native int TF2Attrib_GetStaticAttribs(int iItemDefIndex, int[] iAttribIndices, float[] flAttribValues, int iMaxLen=16);
+native int TF2Attrib_GetStaticAttribs(int iItemDefIndex, int[] iAttribIndices, float[] flAttribValues, int iMaxLen=TF2ATTRIB_MAX_ITEM_ATTRIBUTES);
 
 /**
  * Returns arrays containing the item server (SOC) attributes and their values present on an entity's item.
@@ -230,12 +232,12 @@ native int TF2Attrib_GetStaticAttribs(int iItemDefIndex, int[] iAttribIndices, f
  * @param iEntity			Entity index to get the item server attribute list from.
  * @param iAttribIndices	Array of attribute definition indices found.
  * @param flAttribValues	Array of attribute values found, corresponding to the indices.
- * @param iMaxLen			Max length of the arrays passed in, default 16. Does not affect the return value.
+ * @param iMaxLen			Max length of the arrays passed in, default TF2ATTRIB_MAX_ITEM_ATTRIBUTES. Does not affect the return value.
  *
- * @return					The number of attributes found on the item's SOC attribute list (max 16 as of June 2017), or -1 if some error happened.
+ * @return					The number of attributes found on the item's SOC attribute list, or -1 if some error happened.
  * @error					Invalid iEntity or iMaxLen, or gamedata for this function failed to load.
  */
-native int TF2Attrib_GetSOCAttribs(int iEntity, int[] iAttribIndices, float[] flAttribValues, int iMaxLen=16);
+native int TF2Attrib_GetSOCAttribs(int iEntity, int[] iAttribIndices, float[] flAttribValues, int iMaxLen=TF2ATTRIB_MAX_ITEM_ATTRIBUTES);
 
 /**
  * Gets whether an attribute's value is stored as a networked float/int, or as a non-networked blob pointer.
