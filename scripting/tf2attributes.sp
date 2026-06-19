@@ -893,6 +893,10 @@ public int Native_SetAttribStringByName(Handle plugin, int numParams) {
 		return false;
 	}
 
+	if (Is64Bit() && !IsNetworkedByDefIndex(attrdef)) {
+		return ThrowNativeError(SP_ERROR_NATIVE, "Attribute '%s' is a non-networked type, which cannot be set on 64-bit servers", strAttrib);
+	}
+
 	// allocate a CEconItemAttribute instance in an entity's runtime attribute list
 	if (!InitializeAttributeValue(pEntAttributeList, attrdef, strAttribVal)) {
 		return false;
@@ -1038,6 +1042,10 @@ public int Native_GetVal(Handle plugin, int numParams) {
 
 /* native int TF2Attrib_UnsafeGetStringValue(Address pRawValue, char[] buffer, int maxlen); */
 public int Native_GetStringVal(Handle plugin, int numParams) {
+	if (Is64Bit()) {
+		return ThrowNativeError(SP_ERROR_NATIVE, "This native is not supported on 64-bit servers");
+	}
+
 	Address pRawValue = GetNativeAddress(1);
 	int maxlen = GetNativeCell(3), length;
 

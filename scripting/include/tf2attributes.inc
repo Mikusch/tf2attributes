@@ -36,15 +36,15 @@ native bool TF2Attrib_SetByDefIndex(int iEntity, int iDefIndex, float flValue);
  * If you use this on a non-numeric attribute, make sure that only the server reads off of that attribute.
  * Non-primitive values aren't replicated correctly between the client and the server; the client will read garbage and may crash!
  *
- * Non-numeric attributes can only be set on 32-bit SourceMod. 
- * On 64-bit the runtime attribute list cannot store the heap pointer, so this returns false for those types.
+ * Non-numeric attributes can only be set on 32-bit.
+ * On 64-bit the runtime attribute list cannot store the heap pointer, so this throws an error for those types.
  *
  * @param iEntity		Entity index to set the attribute on. Must have m_AttributeList.
  * @param strAttrib		Name of the attribute, as from the "name" key in items_game.
  * @param strValue		Value to set the attribute to.
  *
  * @return				True if the attribute was added successfully, false if the attribute name was invalid.
- * @error				Invalid entity index or entity does not have m_AttributeList.
+ * @error				Invalid entity index, entity does not have m_AttributeList, or setting a non-numeric attribute on 64-bit.
  */
 native bool TF2Attrib_SetFromStringValue(int iEntity, const char[] strAttrib, const char[] strValue);
 
@@ -161,16 +161,14 @@ native float TF2Attrib_GetValue(Address pAttrib);
  * WARNING: This dereferences the input value!  Feeding it values that aren't CAttribute_String pointers will result in unexpected behavior, potentially crashing the server.
  * In the case where you only want the currently active value, use TF2Attrib_HookValueString instead.
  *
- * @note This is effectively 32-bit only. 
- * On 64-bit there is no supported way to obtain a valid raw string pointer through this plugin.
- * TF2Attrib_GetValue returns a truncated value and TF2Attrib_GetSOCAttribs / TF2Attrib_GetStaticAttribs return 0.0 for non-networked (string) attributes.
- * Use TF2Attrib_HookValueString to read a string attribute's value on 64-bit.
+ * This native is 32-bit only and throws on 64-bit.  Use TF2Attrib_HookValueString to read a string attribute's value on 64-bit.
  *
- * @param pRawValue		Raw attribute value.  You can get this value with either TF2Attrib_GetValue, TF2Attrib_GetSOCAttribs, or TF2Attrib_GetStaticAttribs (32-bit only; see note above).
+ * @param pRawValue		Raw attribute value.  You can get this value with either TF2Attrib_GetValue, TF2Attrib_GetSOCAttribs, or TF2Attrib_GetStaticAttribs.
  * @param buffer		Buffer to store the resulting string to.
  * @param maxlen		Maximum length of the buffer.
  *
  * @return Number of bytes written.
+ * @error Called on a 64-bit server.
  */
 native int TF2Attrib_UnsafeGetStringValue(Address pRawValue, char[] buffer, int maxlen);
 
