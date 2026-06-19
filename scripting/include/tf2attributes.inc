@@ -28,6 +28,25 @@ native bool TF2Attrib_SetByName(int iEntity, const char[] strAttrib, float flVal
 native bool TF2Attrib_SetByDefIndex(int iEntity, int iDefIndex, float flValue);
 
 /**
+ * Parses the attribute name and value strings and applies it on the entity.  This parses
+ * numeric and string attributes.
+ *
+ * If you use this on a non-numeric attribute, make sure that only the server reads off of that attribute.
+ * Non-primitive values aren't replicated correctly between the client and the server; the client will read garbage and may crash!
+ *
+ * Non-numeric attributes can only be set on 32-bit SourceMod. 
+ * On 64-bit the runtime attribute list cannot store the heap pointer, so this returns false for those types.
+ *
+ * @param iEntity		Entity index to set the attribute on. Must have m_AttributeList.
+ * @param strAttrib		Name of the attribute, as from the "name" key in items_game.
+ * @param strValue		Value to set the attribute to.
+ *
+ * @return				True if the attribute was added successfully, false if the attribute name was invalid.
+ * @error				Invalid entity index or entity does not have m_AttributeList.
+ */
+native bool TF2Attrib_SetFromStringValue(int iEntity, const char[] strAttrib, const char[] strValue);
+
+/**
  * Returns the address of an attribute on an entity.
  *
  * @param iEntity		Entity index to get attribute from. Must have m_AttributeList.
@@ -135,6 +154,25 @@ native void TF2Attrib_SetValue(Address pAttrib, float flValue);
 native float TF2Attrib_GetValue(Address pAttrib);
 
 /**
+ * Returns the string data from its raw value representation (a CAttribute_String instance).
+ *
+ * WARNING: This dereferences the input value!  Feeding it values that aren't CAttribute_String pointers will result in unexpected behavior, potentially crashing the server.
+ * In the case where you only want the currently active value, use TF2Attrib_HookValueString instead.
+ *
+ * @note This is effectively 32-bit only. 
+ * On 64-bit there is no supported way to obtain a valid raw string pointer through this plugin.
+ * TF2Attrib_GetValue returns a truncated value and TF2Attrib_GetSOCAttribs / TF2Attrib_GetStaticAttribs return 0.0 for non-networked (string) attributes.
+ * Use TF2Attrib_HookValueString to read a string attribute's value on 64-bit.
+ *
+ * @param pRawValue		Raw attribute value.  You can get this value with either TF2Attrib_GetValue, TF2Attrib_GetSOCAttribs, or TF2Attrib_GetStaticAttribs (32-bit only; see note above).
+ * @param buffer		Buffer to store the resulting string to.
+ * @param maxlen		Maximum length of the buffer.
+ *
+ * @return Number of bytes written.
+ */
+native int TF2Attrib_UnsafeGetStringValue(Address pRawValue, char[] buffer, int maxlen);
+
+/**
  * Sets the value of m_nRefundableCurrency on an attribute.
  *
  * @param pAttrib		Address of the attribute.
@@ -167,7 +205,10 @@ native int TF2Attrib_ListDefIndices(int iEntity, int[] iDefIndices, int iMaxLen=
 
 /**
  * Returns arrays containing the static attributes and their values present on an item definition.
- * Non-networked attribute values are pending for 64-bit SourceMod.
+ *
+ * Only networked attribute *values* are returned.
+ * Non-networked attributes still occupy a slot in iAttribIndices and are still included in the return count.
+ * On 32-bit a non-networked value is returned as a pointer reinterpreted as a float, on 64-bit it is always 0.0.
  *
  * @param iItemDefIndex		Item definition index (e.g. 7 for Shovel) to get static attribute list from.
  * @param iAttribIndices	Array of attribute definition indices found on the item definition.
@@ -181,7 +222,10 @@ native int TF2Attrib_GetStaticAttribs(int iItemDefIndex, int[] iAttribIndices, f
 
 /**
  * Returns arrays containing the item server (SOC) attributes and their values present on an entity's item.
- * Non-networked attribute values are pending for 64-bit SourceMod.
+ *
+ * Only networked attribute *values* are returned.
+ * Non-networked attributes still occupy a slot in iAttribIndices and are still included in the return count.
+ * On 32-bit a non-networked value is returned as a pointer reinterpreted as a float, on 64-bit it is always 0.0.
  *
  * @param iEntity			Entity index to get the item server attribute list from.
  * @param iAttribIndices	Array of attribute definition indices found.
@@ -268,6 +312,19 @@ native float TF2Attrib_HookValueFloat(float flInitial, const char[] attrClass, i
 native int TF2Attrib_HookValueInt(int nInitial, const char[] attrClass, int iEntity);
 
 /**
+ * Applies a transformation to the given initial value, following the rules according to the given attribute class.
+ *
+ * @param initial			Initial string value.  (This appears to only be returned if the entity doesn't have the attribute.)
+ * @param attrClass			The attribute class, as from the "attribute_class" key in items_game.
+ * @param iEntity			The entity that should be checked.  Checking players also checks their equipped items.
+ * @param buffer			Transformed initial value.
+ * @param maxlen			Buffer size.
+ *
+ * @return					Number of bytes written.
+ */
+native int TF2Attrib_HookValueString(const char[] initial, const char[] attrClass, int iEntity, char[] buffer, int maxlen);
+
+/**
  * Gets whether the plugin loaded without ANY errors.
  * For the purpose of allowing dependencies to ignore the plugin if this returns false.
  * Check in OnAllPluginsLoaded() or something. I dunno.
@@ -292,6 +349,7 @@ public void __pl_tf2attributes_SetNTVOptional()
 {
 	MarkNativeAsOptional("TF2Attrib_SetByName");
 	MarkNativeAsOptional("TF2Attrib_SetByDefIndex");
+	MarkNativeAsOptional("TF2Attrib_SetFromStringValue");
 	MarkNativeAsOptional("TF2Attrib_GetByName");
 	MarkNativeAsOptional("TF2Attrib_GetByDefIndex");
 	MarkNativeAsOptional("TF2Attrib_RemoveByName");
@@ -302,6 +360,7 @@ public void __pl_tf2attributes_SetNTVOptional()
 	MarkNativeAsOptional("TF2Attrib_GetDefIndex");
 	MarkNativeAsOptional("TF2Attrib_SetValue");
 	MarkNativeAsOptional("TF2Attrib_GetValue");
+	MarkNativeAsOptional("TF2Attrib_UnsafeGetStringValue");
 	MarkNativeAsOptional("TF2Attrib_SetRefundableCurrency");
 	MarkNativeAsOptional("TF2Attrib_GetRefundableCurrency");
 	MarkNativeAsOptional("TF2Attrib_ListDefIndices");
@@ -314,6 +373,7 @@ public void __pl_tf2attributes_SetNTVOptional()
 	MarkNativeAsOptional("TF2Attrib_RemoveCustomPlayerAttribute");
 	MarkNativeAsOptional("TF2Attrib_HookValueFloat");
 	MarkNativeAsOptional("TF2Attrib_HookValueInt");
+	MarkNativeAsOptional("TF2Attrib_HookValueString");
 	MarkNativeAsOptional("TF2Attrib_IsReady");
 }
 #endif
