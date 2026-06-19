@@ -15,3 +15,5 @@ jobs:
       run: spcomp scripting/tf2attributes.sp
     - name: Compile example
       run: spcomp -iscripting/include scripting/tf2attributes_example.sp
+    - name: Compile test
+      run: spcomp -iscripting/include scripting/tf2attributes_test.sp
